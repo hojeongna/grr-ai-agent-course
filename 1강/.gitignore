@@ -1,0 +1,7 @@
+# 실제 개인정보/토큰은 절대 커밋하지 않습니다
+.env
+/USER.md
+memory/
+__pycache__/
+*.pyc
+.DS_Store
