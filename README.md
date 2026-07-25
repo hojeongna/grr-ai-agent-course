@@ -6,6 +6,6 @@
 ## 강의 목록
 
 - [`1강/`](./1강) — 에이전트 설치, md 파일로 정체성 세팅, 텔레그램 연결, 6가지 훅(SessionStart/PreCompact/PostCompact/PostToolUse/Stop/UserPromptSubmit)
-- 2강 — 준비 중 (스케줄러 자동화, 키워드 훅)
+- [`2강/`](./2강) — tmux 기반 스케줄러 데몬, 키워드 트리거 훅, RSS/WebFetch로 최신 소식 자동 확인
 
 각 강의 폴더를 그대로 복사해서 진행하면 됩니다. Windows 사용자는 각 강의 README의 WSL 안내를 참고하세요.
