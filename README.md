@@ -7,5 +7,6 @@
 
 - [`1강/`](./1강) — 에이전트 설치, md 파일로 정체성 세팅, 텔레그램 연결, 6가지 훅(SessionStart/PreCompact/PostCompact/PostToolUse/Stop/UserPromptSubmit)
 - [`2강/`](./2강) — tmux 기반 스케줄러 데몬, 키워드 트리거 훅, RSS/WebFetch로 최신 소식 자동 확인
+- [`3강/`](./3강) — 구글폼/시트 → 노션 → 슬랙 → 텔레그램을 넘나드는 문의 자동라우팅 파이프라인 (촬영 예정, 설계와 예상 함정 미리 공개)
 
 각 강의 폴더를 그대로 복사해서 진행하면 됩니다. Windows 사용자는 각 강의 README의 WSL 안내를 참고하세요.
