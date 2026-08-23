@@ -4,18 +4,23 @@
 1·2강에서 만든 에이전트(정체성 + 텔레그램 연결 + 스케줄러)에 **어디서든 접속할 수 있는 원격
 경로**와 **텔레그램 미니앱으로 직접 조작하는 화면**을 붙여봅니다.
 
-⚠️ **아직 촬영 전이라 실제 코드는 없습니다.** 1·2강과 달리 이번 강의도 3강과 마찬가지로 완성된
-스크립트를 복사해서 쓰는 대신, **촬영 중에 에이전트에게 직접 프롬프트로 만들어달라고 하는 과정
-자체가 콘텐츠**입니다 — "나만의 에이전트" 시리즈 취지상, 사전에 만들어둔 코드를 재생하는 게
-아니라 실제 사용자가 에이전트에게 말을 걸어가며 눈앞에서 화면을 함께 완성해가는 걸 보여주기
-위해서입니다. 아래 내용은 브레인스토밍으로 미리 정한 설계(특히 미니앱이 읽고 쓸 데이터
-스키마)와 사전 준비물을 미리 공유하는 것이고, 실제 코드와 최종 README는 촬영·편집이 끝나는
-대로 이 폴더에 채워집니다.
+⚠️ **미니앱 코드는 아직 없습니다 — 촬영 중에 만듭니다.** 1·2강과 달리 이번 강의도 3강과
+마찬가지로 완성된 스크립트를 복사해서 쓰는 대신, **촬영 중에 에이전트에게 직접 프롬프트로
+만들어달라고 하는 과정 자체가 콘텐츠**입니다 — "나만의 에이전트" 시리즈 취지상, 사전에
+만들어둔 코드를 재생하는 게 아니라 실제 사용자가 에이전트에게 말을 걸어가며 눈앞에서 화면을
+함께 완성해가는 걸 보여주기 위해서입니다.
+
+**다만 원격 접속 파트(테일스케일 + SSH + Termius)는 리허설을 한 번 돌려서 절차를 검증했고,
+그때 걸린 함정까지 아래에 그대로 정리해뒀습니다.** 이쪽은 "만들어가는 과정"이 아니라
+계정·설치·권한 설정이라, 촬영 중에 막혀서 헤매는 게 시청자에게 아무 도움이 안 되는
+구간이기 때문입니다. 미니앱 설계(특히 읽고 쓸 데이터 스키마)도 아래에 미리 공유하고,
+실제 코드와 최종 README는 촬영·편집이 끝나는 대로 이 폴더에 채워집니다.
 
 ## 이번 강의에서 다루는 것
 
 - **테일스케일(Tailscale) + Termius 원격 접속** — 집/회사 컴퓨터에서 돌아가는 에이전트에게,
-  밖에서도 터미널로 직접 붙어서 상태를 보고 tmux 세션에 다시 attach할 수 있게 만듭니다.
+  밖에서도 터미널로 직접 붙어서 상태를 보고, tmux를 쓰고 있다면 세션에 다시 attach할 수
+  있게 만듭니다.
 - **텔레그램 미니앱(Web App) 2개** — 1·2강에서 이미 연결해둔 텔레그램 봇의 메뉴 버튼/인라인
   버튼으로 웹페이지를 띄우는 기능을 씁니다.
   - **① 음악 추천 화면 (정적)** — 오늘의 추천곡을 카드로 보여주고, 버튼을 누르면 유튜브/멜론
@@ -34,17 +39,241 @@
 1·2강에서 만든 것을 그대로 이어서 씁니다 — **새 프로젝트가 아닙니다.**
 
 - 1강에서 만든 `my-agent` 프로젝트 (정체성 md 파일들 + 6가지 훅 + 텔레그램 봇/Channels 연동)
-- 2강에서 붙인 tmux 세션 + `scheduler_daemon.py` (원격에서 다시 attach할 대상이 바로 이 세션)
+- 2강에서 붙인 스케줄러 데몬 (`scheduler_daemon.py`) — 원격에서 상태를 확인할 대상이 이겁니다.
+  2강을 WSL+tmux로 진행했다면 그 tmux 세션이 그대로 "다시 attach할 대상"이 되고, Windows
+  네이티브로 변형해서 진행했다면 attach 대신 "상태 확인 + 재실행"이 됩니다 (아래 참고).
 - 테일스케일 계정 (무료 플랜으로 충분) — 에이전트가 돌아가는 컴퓨터와, 밖에서 접속할 폰/노트북
   양쪽에 설치해서 같은 tailnet에 묶어둡니다.
 - Termius 앱 (모바일/데스크톱) — 테일스케일로 연결된 IP로 SSH 접속해서 터미널을 쓰기 위한
-  클라이언트입니다.
+  클라이언트입니다. **SSH 키는 Termius 안(Keychain)에서 만들어 씁니다** — 비밀번호 인증은
+  쓰지 않습니다. 이유는 아래 4번에서 설명합니다.
 - 스마트폰 (텔레그램 미니앱은 모바일 텔레그램 앱에서 확인하는 게 기본 시연 환경입니다 — 데스크톱
   텔레그램에서도 뜨지만, "밖에서 폰으로 내 에이전트를 조작한다"는 그림이 이번 강의의 핵심이라
   폰 화면으로 시연합니다.)
 
-새로 필요한 계정/설치는 이 넷뿐이고, 나머지(텔레그램 봇, Claude Code, tmux)는 1·2강 것을
+새로 필요한 계정/설치는 이 넷뿐이고, 나머지(텔레그램 봇, Claude Code)는 1·2강 것을
 그대로 재사용합니다.
+
+## 원격 접속 세팅 — 리허설에서 검증한 절차
+
+### 왜 테일스케일인가
+
+밖에서 집 PC에 SSH로 붙으려면 보통 공유기에서 포트포워딩을 열고, 공인 IP(또는 DDNS)를
+알아야 합니다. 그런데 그 순간부터 전 세계가 그 포트를 두드릴 수 있게 됩니다. 테일스케일은
+이걸 통째로 우회합니다 — 두 기기가 각자 **바깥으로 나가는** 연결만 맺어서 사설
+터널(WireGuard)을 만들고, 그 터널 안에서 서로 `100.x.x.x` 주소로 보입니다.
+**공유기에 열어둔 구멍이 하나도 없는데 밖에서 접속되는 이유**가 이겁니다.
+
+### 순서
+
+```
+1  양쪽(PC + 폰)에 테일스케일 설치 → 같은 계정으로 로그인
+2  PC에 SSH 서버 켜기
+3  방화벽을 테일스케일 대역으로만 제한            ← 보안 핵심
+4  Termius에서 SSH 키 생성 → 공개키를 PC에 등록   ← 인증
+5  폰 Termius로 접속
+```
+
+### 1. 테일스케일 설치 & 로그인
+
+에이전트가 돌아가는 PC와 밖에서 접속할 폰 **양쪽 다** 설치하고, **같은 계정**으로
+로그인합니다. 계정이 다르면 서로 안 보입니다.
+
+```powershell
+# Windows (PowerShell)
+winget install --id Tailscale.Tailscale
+& 'C:\Program Files\Tailscale\tailscale.exe' up
+```
+
+```bash
+# macOS
+brew install --cask tailscale
+
+# Linux
+curl -fsSL https://tailscale.com/install.sh | sh && sudo tailscale up
+```
+
+`up`을 실행하면 인증 URL이 나옵니다. 브라우저에서 열어 로그인하면 끝이고, 할당된 주소는
+`tailscale status`로 확인합니다.
+
+> 💡 **재설치할 때는 admin 콘솔에서 옛 기기부터 지우세요.** 한 번 로그인한 기기는
+> [login.tailscale.com/admin/machines](https://login.tailscale.com/admin/machines)에 계속
+> 남아 있습니다. 지우지 않고 재설치하면 이름 뒤에 `-1`이 붙은 기기가 새로 생기거나 예전
+> 항목이 그대로 살아 있어서, "처음 연결되는 장면"이 깔끔하게 안 나옵니다.
+
+### 2. SSH 서버 켜기
+
+- **macOS**: 시스템 설정 → 일반 → 공유 → **원격 로그인** 켜기
+- **Linux**: `sudo systemctl enable --now sshd`
+- **Windows**: OpenSSH 서버가 대부분 이미 설치돼 있고 **꺼져 있기만** 합니다.
+  **관리자 권한** PowerShell에서:
+
+```powershell
+Set-Service -Name sshd -StartupType Automatic   # 부팅 시 자동 시작
+Start-Service sshd
+```
+
+### 3. 방화벽을 테일스케일 대역으로만 제한
+
+**이 강의에서 제일 중요한 한 단계입니다.** SSH를 그냥 켜면 같은 와이파이에 붙은 아무나
+22번 포트를 두드릴 수 있습니다. 테일스케일로 들어온 트래픽만 통과시키게 잠급니다 —
+테일스케일이 쓰는 대역은 `100.64.0.0/10`입니다.
+
+```powershell
+# Windows — 관리자 PowerShell
+# ① 기본 규칙(모든 네트워크에서 22번 허용)을 끄고
+Disable-NetFirewallRule -Name 'OpenSSH-Server-In-TCP'
+
+# ② 테일스케일 대역에서 온 것만 허용하는 규칙을 새로 만든다
+New-NetFirewallRule -Name 'SSH-Tailscale-Only' -DisplayName 'SSH (Tailscale only)' `
+  -Direction Inbound -Protocol TCP -LocalPort 22 -Action Allow `
+  -RemoteAddress 100.64.0.0/10 -Profile Any -Enabled True
+```
+
+이렇게 해두면 내 tailnet에 묶인 기기(내 폰, 내 노트북)에서만 포트가 보이고, 그 밖에서는
+**포트가 열려 있다는 사실 자체가 안 보입니다.**
+
+### 4. SSH 키 — Termius Keychain에서 만들기
+
+**비밀번호 대신 키로 인증합니다.** 이유가 두 가지입니다:
+
+- 비밀번호 인증은 PC 계정 비밀번호를 그대로 폰 앱에 저장하게 됩니다. 게다가 Windows에서
+  PIN이나 Windows Hello만 쓰고 있으면 정작 그 비밀번호를 본인도 모르는 경우가 많습니다.
+- 키 인증은 **개인키가 폰 밖으로 나가지 않습니다.** PC에 등록하는 건 공개키뿐이라,
+  채팅으로 주고받아도(그리고 촬영으로 화면에 비쳐도) 그것만으로는 아무것도 열 수 없습니다.
+
+> 💡 **공개키는 자물쇠, 개인키는 열쇠입니다.** 자물쇠는 아무한테나 보여줘도 되지만 열쇠는
+> 아닙니다. PC에 자물쇠를 달아두고 폰 안의 열쇠로만 열리게 만드는 겁니다.
+> `-----BEGIN OPENSSH PRIVATE KEY-----`로 시작하는 문자열은 **절대** 어디에도 붙여넣지
+> 마세요 — 그게 열쇠입니다.
+
+Termius에서:
+
+```
+Keychain → + → Generate Key
+  Type        ED25519
+  Name        아무거나 (예: mypc)
+  Passphrase  비워도 됨
+→ 만든 키를 열어 Copy Public Key
+```
+
+복사된 한 줄(`ssh-ed25519 AAAA…`)을 PC에 등록합니다.
+
+#### macOS / Linux
+
+```bash
+mkdir -p ~/.ssh && chmod 700 ~/.ssh
+echo 'ssh-ed25519 AAAA...' >> ~/.ssh/authorized_keys
+chmod 600 ~/.ssh/authorized_keys
+```
+
+#### Windows — 함정 세 개가 몰려 있습니다
+
+**① 관리자 계정은 `~/.ssh/authorized_keys`를 아예 안 봅니다.**
+
+Windows OpenSSH의 `sshd_config`에는 이 블록이 기본으로 들어 있습니다:
+
+```
+Match Group administrators
+       AuthorizedKeysFile __PROGRAMDATA__/ssh/administrators_authorized_keys
+```
+
+로그인하려는 계정이 Administrators 그룹이면(대부분 그렇습니다) 홈 폴더가 아니라
+`C:\ProgramData\ssh\administrators_authorized_keys`를 봅니다. 홈 폴더에 넣으면 **에러도
+없이 조용히 무시당하고**, "키를 넣었는데 왜 비밀번호를 물어보지?" 상태가 됩니다.
+
+**② 그 파일의 권한(ACL)이 느슨하면 sshd가 파일을 통째로 무시합니다.**
+
+Administrators와 SYSTEM만 접근할 수 있어야 합니다. 그리고 한국어 Windows에서는 그룹
+이름이 `Administrators`가 아닐 수 있으니 **이름 대신 SID로** 지정하는 게 안전합니다.
+
+```powershell
+$dst = 'C:\ProgramData\ssh\administrators_authorized_keys'
+icacls $dst /inheritance:r /grant "*S-1-5-32-544:F" /grant "*S-1-5-18:F"
+Restart-Service sshd -Force
+```
+
+(`S-1-5-32-544` = Administrators, `S-1-5-18` = SYSTEM)
+
+제대로 잠겼는지 확인하는 방법은 간단합니다 — **일반 권한 창에서 그 파일을 읽어봤을 때
+"액세스가 거부되었습니다"가 나오면 맞게 된 겁니다.** 그냥 읽히면 잘못된 겁니다.
+
+**③ 그 파일은 BOM 없이 저장해야 합니다.**
+
+PowerShell 5.1의 `-Encoding utf8`은 파일 맨 앞에 BOM(눈에 안 보이는 3바이트)을 붙입니다.
+그러면 sshd가 첫 줄을 키로 인식하지 못합니다. 공개키는 어차피 ASCII 문자뿐이니
+`-Encoding ascii`로 쓰면 안전합니다.
+
+```powershell
+'ssh-ed25519 AAAA...' | Set-Content -Path $dst -Encoding ascii
+```
+
+### 5. 접속
+
+Termius에서 New Host:
+
+```
+Hostname   tailscale status 로 확인한 100.x.x.x
+Port       22
+Username   PC의 로그인 계정명 (Windows는 whoami 로 확인)
+Password   비워둔다
+Key        4번에서 만든 키 선택        ← Password 가 아니라 Key
+```
+
+### Windows 보너스 — 기본 셸을 PowerShell로
+
+Windows OpenSSH로 접속하면 `cmd.exe`가 뜹니다. 이 시리즈의 명령들은 PowerShell 기준이라
+그대로는 안 먹습니다. **관리자 권한**으로 한 번만 바꿔두면 됩니다:
+
+```powershell
+New-ItemProperty -Path 'HKLM:\SOFTWARE\OpenSSH' -Name DefaultShell `
+  -Value "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe" `
+  -PropertyType String -Force
+```
+
+접속했을 때 `PS C:\Users\...>` 로 시작하면 성공입니다.
+
+### 접속한 다음 — tmux가 있느냐 없느냐
+
+2강을 **WSL + tmux**로 진행했다면 원안 그대로입니다. 붙어서 세션에 다시 들어가면 아까
+보던 에이전트 화면이 그대로 살아 있습니다:
+
+```bash
+tmux attach -t agent
+```
+
+2강을 **Windows 네이티브**로 변형해서 진행했다면(tmux 없이 `Start-Process`로 데몬을
+띄웠다면) attach할 세션이 없습니다. 대신 "상태 확인 + 필요하면 새로 실행"이 됩니다:
+
+```powershell
+cd C:\projects\my-agent
+Get-Process python | Format-Table Id,StartTime              # 데몬이 언제부터 돌고 있나
+Get-Content memory\scheduler.log -Tail 20 -Encoding UTF8    # 최근에 뭘 했나
+claude --channels plugin:telegram@claude-plugins-official   # 새 세션 시작
+```
+
+> 💡 **차이를 알고 가세요.** tmux는 "끊어도 살아있는 화면"을 만들어주는 도구입니다. tmux
+> 없이 SSH로 띄운 대화형 프로그램은 연결이 끊기면 같이 죽습니다. 폰으로 붙어서 에이전트와
+> 대화하다가 지하철에서 신호가 끊기는 상황을 생각하면 tmux가 있는 쪽이 확실히 낫습니다.
+> Windows에서 그걸 원한다면 2강의 WSL 경로로 돌아가는 게 정답입니다.
+
+### 리허설에서 실제로 걸린 것들
+
+촬영 전에 한 번 돌려보며 걸렸던 것들입니다. 대부분 "에이전트한테 시켰더니 에이전트도 몰라서
+같이 헤맨" 지점이라, 미리 알고 가면 촬영이 훨씬 매끄럽습니다.
+
+| 증상 | 원인 | 해결 |
+|---|---|---|
+| 키를 등록했는데 계속 비밀번호를 물어봄 | 관리자 계정인데 `~/.ssh/authorized_keys`에 넣음 | `administrators_authorized_keys`에 등록 |
+| 위치도 맞는데 여전히 안 됨 | 파일 ACL이 느슨하거나 BOM이 붙음 | `icacls`로 SID 지정, `-Encoding ascii`로 저장 |
+| 관리자 스크립트가 문법 에러로 죽음 | PS 5.1이 BOM 없는 UTF-8을 cp949로 읽어 한글 주석이 깨짐 | 관리자로 돌릴 스크립트는 **주석까지 전부 영문**으로 |
+| 접속은 됐는데 명령이 안 먹음 | 기본 셸이 `cmd.exe` | `DefaultShell` 레지스트리 변경 |
+| 에이전트가 뭘 시켜도 반응이 없음 | UAC 창이 떴는데 폰만 보느라 놓침 | 관리자 작업 전에는 PC 화면을 볼 것 |
+
+> 💡 **마지막 줄이 은근히 중요합니다.** 이번 강의는 "폰을 보면서 PC를 세팅하는" 구조라
+> UAC 승인 창을 놓치기 쉽습니다. 에이전트는 사용자가 승인을 안 눌렀는지 스크립트가 죽었는지
+> 구분하지 못하고 그냥 기다립니다. 관리자 권한이 필요한 단계에서는 **PC 화면을 보고 있으라고
+> 미리 알려주는 것**까지가 에이전트의 일입니다.
 
 ## 미니앱 데이터 설계 (초안 — 촬영 중 그대로 쓰거나 대화하며 바뀔 수 있음)
 
@@ -129,8 +358,9 @@ updated: 2026-08-19T21:40:00+09:00
 
 ## 실습 vs 시연
 
-- **직접 따라할 수 있는 부분**: 테일스케일 설치·tailnet 연결, Termius로 SSH 접속 — 진입장벽이
-  낮아서 시청자 본인 환경으로 그대로 실습 가능합니다.
+- **직접 따라할 수 있는 부분**: 테일스케일 설치·tailnet 연결, SSH 서버 켜기, 방화벽 제한,
+  Termius 키 등록과 접속 — 위에 절차와 함정까지 전부 적어뒀으니 시청자 본인 환경에서 그대로
+  실습 가능합니다.
 - **함께 만들어가는 부분**: 미니앱 2개의 실제 코드 — 위에서 밝혔듯 촬영 중 라이브로
   완성합니다. 시청자는 완성된 코드를 받는 대신, 완성되는 "과정"을 보고 자기 에이전트에도
   같은 방식으로 요청해서 직접 만들어보게 됩니다.
@@ -140,5 +370,5 @@ updated: 2026-08-19T21:40:00+09:00
 촬영 완료 후 이 README는 1강/2강과 동일한 형식(개요 → 실습 흐름 → 폴더 구조 → 자격증명
 변수명 정리)으로 교체되고, 실제 스크립트도 함께 올라옵니다.
 
-> ⚠️ `USER.md`, `.env`, `todos.md`(개인 일정이 들어갈 수 있음)는 개인정보가 들어가는
-> 파일입니다. 절대 공개 저장소에 커밋하지 마세요.
+> ⚠️ `USER.md`, `.env`, `todos.md`(개인 일정이 들어갈 수 있음), 그리고 SSH **개인키**는
+> 전부 개인정보가 들어가는 파일입니다. 절대 공개 저장소에 커밋하지 마세요.
